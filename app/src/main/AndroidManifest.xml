@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".ClippyApp"
@@ -38,8 +42,19 @@
             android:name=".CaptureActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:theme="@style/Theme.Clippy.Capture"
-            android:taskAffinity="" />
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Clippy.Capture" />
+
+        <service
+            android:name=".ClipboardWatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps Clippy running so clipboard history can be saved as you copy" />
+        </service>
 
         <service
             android:name=".SaveTileService"

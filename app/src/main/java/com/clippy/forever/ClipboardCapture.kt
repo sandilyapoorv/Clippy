@@ -51,6 +51,7 @@ class ClipboardCapture(private val context: Context) {
             ClipData.newPlainText("Clippy text", record.text.orEmpty())
         }
         clipboard.setPrimaryClip(clip)
+        ClippyApp.ignoreNextClipboardChange = true
     }
 
     private fun saveText(text: String): CaptureStatus {

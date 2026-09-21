@@ -61,6 +61,27 @@
             android:textColor="@color/clippy_ink"
             android:textSize="13sp" />
 
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/watchSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="20dp"
+            android:checked="true"
+            android:text="@string/watch_label"
+            android:textColor="@color/clippy_ink" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/overlayButton"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="20dp"
+            android:text="@string/overlay_needed" />
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"

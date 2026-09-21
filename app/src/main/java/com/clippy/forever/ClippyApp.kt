@@ -11,10 +11,17 @@ class ClippyApp : Application() {
         instance = this
         store = ClipStore(this)
         SaveNotifier.ensureChannel(this)
+        ClipboardWatchService.start(this)
     }
 
     companion object {
         lateinit var instance: ClippyApp
             private set
+
+        @Volatile
+        var mainVisible: Boolean = false
+
+        @Volatile
+        var ignoreNextClipboardChange: Boolean = false
     }
 }

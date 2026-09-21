@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -23,8 +25,10 @@ class MainActivity : AppCompatActivity() {
 
     private val notifyPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) SaveNotifier.show(this)
+    ) {
+        ClipboardWatchService.start(this)
+        maybeAskBatteryExemption()
+        refreshWatchUi()
     }
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -60,6 +64,19 @@ class MainActivity : AppCompatActivity() {
             showStatus(capture.captureCurrent())
             refresh()
         }
+        binding.watchSwitch.setOnCheckedChangeListener { _, checked ->
+            WatchPrefs.setEnabled(this, checked)
+            if (checked) ClipboardWatchService.start(this) else ClipboardWatchService.stop(this)
+            refreshWatchUi()
+        }
+        binding.overlayButton.setOnClickListener {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName"),
+                ),
+            )
+        }
         requestNotificationAccess()
         handleIncoming(intent)
         refresh()
@@ -73,6 +90,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        ClippyApp.mainVisible = true
+        binding.watchSwitch.isChecked = WatchPrefs.isEnabled(this)
+        refreshWatchUi()
+        if (WatchPrefs.isEnabled(this)) {
+            ClipboardWatchService.start(this)
+        }
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.addPrimaryClipChangedListener(clipListener)
         showStatus(capture.captureCurrent())
@@ -80,6 +103,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        ClippyApp.mainVisible = false
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.removePrimaryClipChangedListener(clipListener)
         super.onPause()
@@ -116,6 +140,14 @@ class MainActivity : AppCompatActivity() {
         binding.countLabel.text = getString(R.string.count_label, ClippyApp.instance.store.count())
     }
 
+    private fun refreshWatchUi() {
+        val overlayOn = Settings.canDrawOverlays(this)
+        binding.overlayButton.text = getString(
+            if (overlayOn) R.string.overlay_granted else R.string.overlay_needed,
+        )
+        binding.overlayButton.isEnabled = !overlayOn
+    }
+
     private fun showStatus(status: CaptureStatus) {
         val message = when (status) {
             CaptureStatus.SAVED -> getString(R.string.saved)
@@ -128,14 +160,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestNotificationAccess() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                return
-            }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
         }
-        SaveNotifier.show(this)
+        ClipboardWatchService.start(this)
+        maybeAskBatteryExemption()
+    }
+
+    private fun maybeAskBatteryExemption() {
+        if (Build.VERSION.SDK_INT < 23) return
+        val power = getSystemService(PowerManager::class.java)
+        if (power.isIgnoringBatteryOptimizations(packageName)) return
+        if (!WatchPrefs.shouldAskBattery(this)) return
+        WatchPrefs.markBatteryAsked(this)
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:$packageName"),
+                ),
+            )
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        }
     }
 }

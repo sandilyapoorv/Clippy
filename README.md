@@ -1,24 +1,18 @@
 # Clippy
 
-Very small Android clipboard history. Text and images you save stay on the phone until you delete them. There is no account, no cloud, and no automatic expiry.
+Very small Android clipboard history. Text and images stay on the phone until you delete them. There is no account, no cloud, and no automatic expiry.
 
 ## Install
 
-GitHub Actions builds a signed APK and AAB, then attaches them to the [GitHub Release](https://github.com/sandilyapoorv/Clippy/releases/tag/v1.0.0).
+GitHub Actions builds a signed APK and AAB, then attaches them to the [GitHub Release](https://github.com/sandilyapoorv/Clippy/releases).
 
-## How to use it
+## Always watching
 
-Android 10+ only lets a normal app read the clipboard while that app is visible. Clippy does not pretend otherwise.
+Leave **Always watching** on. Clippy runs a persistent foreground service and comes back after reboot.
 
-Save a clip by:
+Android still only lets a normal app *read* clipboard bytes while it has screen focus. So when you copy, Clippy briefly pops a transparent capture screen (needs **Display over other apps**) and saves the text or image. It is not a silent system-level keylogger; that permission does not exist for ordinary apps.
 
-1. Opening Clippy and copying (it records while the screen is open)
-2. Tapping **Save clipboard now**
-3. Tapping the persistent notification
-4. Using the **Save clipboard** quick-settings tile
-5. Sharing text or an image to Clippy
-
-Duplicates of the same text or image bytes are stored once.
+Also allow the persistent notification and battery exemption so the phone does not kill it.
 
 ## Build locally
 
