@@ -68,16 +68,17 @@ jobs:
             ## Install
             1. Download `app-release.apk`
             2. Allow install from this source
-            3. Open Clippy, copy something, then tap **Save clipboard now** (or leave Clippy open while you copy)
+            3. Open Clippy, keep **Always watching** on, allow notifications, Display over other apps, and battery exemption
+            4. Copy text or images in any app — Clippy stays running and saves them
 
             ## What this build is
             - Signed with the repo-committed Clippy keystore (stable for sideload updates from this repo; not a Play-protected upload key)
             - AAB attached for Play Console experiments
-            - No automatic background capture on stock Android 10+ (platform restriction)
+            - Persistent foreground watcher; Android still requires a brief on-screen peek to read clipboard bytes
 
             ## Capture paths that work
+            - Always watching (background service + overlay peek)
             - Clippy is on screen
             - Save clipboard now
-            - Persistent notification tap
             - Quick Settings tile
             - Share sheet → Clippy
