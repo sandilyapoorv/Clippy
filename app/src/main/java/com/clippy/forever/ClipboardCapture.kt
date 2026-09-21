@@ -55,8 +55,13 @@ class ClipboardCapture(private val context: Context) {
     }
 
     private fun saveText(text: String): CaptureStatus {
+        ClipInbox.addText(context, text)
         val result = store.insertText(text, Fingerprint.ofText(text))
-        return if (result.duplicate) CaptureStatus.DUPLICATE else CaptureStatus.SAVED
+        return when {
+            result.failed -> CaptureStatus.SAVED
+            result.duplicate -> CaptureStatus.DUPLICATE
+            else -> CaptureStatus.SAVED
+        }
     }
 
     private fun saveImage(uri: Uri, mimeType: String?): CaptureStatus {
@@ -65,7 +70,11 @@ class ClipboardCapture(private val context: Context) {
         if (bytes.isEmpty()) return CaptureStatus.EMPTY
         val mime = mimeType ?: context.contentResolver.getType(uri) ?: "image/*"
         val result = store.insertImage(bytes, mime, Fingerprint.ofImage(bytes))
-        return if (result.duplicate) CaptureStatus.DUPLICATE else CaptureStatus.SAVED
+        return when {
+            result.failed -> CaptureStatus.EMPTY
+            result.duplicate -> CaptureStatus.DUPLICATE
+            else -> CaptureStatus.SAVED
+        }
     }
 
     private fun imageMime(clip: ClipData, uri: Uri?): String? {

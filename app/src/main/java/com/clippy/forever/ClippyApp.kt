@@ -11,7 +11,7 @@ class ClippyApp : Application() {
         instance = this
         store = ClipStore(this)
         SaveNotifier.ensureChannel(this)
-        ClipboardWatchService.start(this)
+        ClipInbox.drain(this, store)
     }
 
     companion object {

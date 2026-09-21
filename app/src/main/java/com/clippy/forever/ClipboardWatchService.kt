@@ -52,9 +52,6 @@ class ClipboardWatchService : Service() {
             return
         }
         if (ClippyApp.mainVisible) return
-        if (ClipboardAccessibilityService.isEnabled(this)) {
-            return
-        }
         val status = ClipboardCapture(this).captureCurrent()
         if (status != CaptureStatus.EMPTY) return
         bringCaptureToFront()

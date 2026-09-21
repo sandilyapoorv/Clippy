@@ -94,6 +94,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         ClippyApp.mainVisible = true
+        ClipInbox.drain(this, ClippyApp.instance.store)
         binding.watchSwitch.isChecked = WatchPrefs.isEnabled(this)
         refreshWatchUi()
         if (WatchPrefs.isEnabled(this)) {

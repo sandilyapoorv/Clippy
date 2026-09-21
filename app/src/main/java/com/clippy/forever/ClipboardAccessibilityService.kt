@@ -41,6 +41,7 @@ class ClipboardAccessibilityService : AccessibilityService() {
         }
         clipboard.addPrimaryClipChangedListener(clipListener)
         connected = this
+        ClipboardWatchService.start(this)
     }
 
     override fun onDestroy() {
@@ -144,23 +145,44 @@ class ClipboardAccessibilityService : AccessibilityService() {
         return null
     }
 
+    private fun focusedText(): String? {
+        val root = rootInActiveWindow ?: return null
+        try {
+            val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+            try {
+                val sliced = sliceSelection(focused)
+                if (!sliced.isNullOrBlank()) return sliced
+                return focused?.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+            } finally {
+                focused?.recycle()
+            }
+        } finally {
+            root.recycle()
+        }
+    }
+
     private fun captureCopy(forceOverlay: Boolean) {
         if (capturing) return
         capturing = true
-        val candidates = listOfNotNull(
-            lastSelection.takeIf { it.isNotBlank() },
-            selectedFromActiveWindow(),
-        )
-        for (text in candidates) {
-            if (saveText(text)) {
-                capturing = false
-                return
-            }
-        }
         val clipStatus = ClipboardCapture(this).captureCurrent()
-        if (clipStatus != CaptureStatus.EMPTY) {
+        if (clipStatus == CaptureStatus.SAVED || clipStatus == CaptureStatus.DUPLICATE) {
+            if (clipStatus == CaptureStatus.SAVED) {
+                SaveNotifier.noteLastSaved(this, lastSelection.ifBlank { "clipboard" })
+            }
             capturing = false
             return
+        }
+        val candidates = listOfNotNull(
+            lastSelection.takeIf { it.isNotBlank() },
+            focusedText(),
+            selectedFromActiveWindow(),
+        ).distinct()
+        for (text in candidates) {
+            val status = persistText(text)
+            if (status == CaptureStatus.SAVED) {
+                SaveNotifier.noteLastSaved(this, text)
+            }
         }
         if (forceOverlay) {
             peekOverlayAndSave()
@@ -198,11 +220,14 @@ class ClipboardAccessibilityService : AccessibilityService() {
             try {
                 field.requestFocus()
                 val status = ClipboardCapture(this).captureCurrent()
-                if (status == CaptureStatus.EMPTY) {
+                if (status == CaptureStatus.SAVED) {
+                    SaveNotifier.noteLastSaved(this, lastSelection.ifBlank { "clipboard" })
+                } else if (status == CaptureStatus.EMPTY) {
                     field.onTextContextMenuItem(android.R.id.paste)
                     val pasted = field.text?.toString()
                     if (!Fingerprint.isBlankText(pasted)) {
-                        saveText(pasted!!.trim())
+                        persistText(pasted!!.trim())
+                        SaveNotifier.noteLastSaved(this, pasted.trim())
                     }
                 }
             } finally {
@@ -215,17 +240,16 @@ class ClipboardAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun saveText(text: String): Boolean {
-        if (Fingerprint.isBlankText(text)) return false
+    private fun persistText(text: String): CaptureStatus {
+        if (Fingerprint.isBlankText(text)) return CaptureStatus.EMPTY
         val now = System.currentTimeMillis()
-        if (text == lastSavedText && now - lastSavedAt < 1_000) return true
+        if (text == lastSavedText && now - lastSavedAt < 1_000) return CaptureStatus.DUPLICATE
         val status = ClipboardCapture(this).captureSharedText(text)
         if (status != CaptureStatus.EMPTY) {
             lastSavedText = text
             lastSavedAt = now
-            return true
         }
-        return false
+        return status
     }
 
     companion object {

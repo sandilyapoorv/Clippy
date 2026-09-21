@@ -48,4 +48,29 @@ object SaveNotifier {
             .build()
         NotificationManagerCompat.from(context).notify(42, notification)
     }
+
+    fun noteLastSaved(context: Context, preview: String) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val tap = PendingIntent.getActivity(
+            context,
+            1,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val snippet = preview.trim().replace("\n", " ").take(80)
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_clipboard)
+            .setContentTitle(context.getString(R.string.notify_title))
+            .setContentText(context.getString(R.string.last_saved, snippet))
+            .setContentIntent(tap)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(42, notification)
+    }
 }

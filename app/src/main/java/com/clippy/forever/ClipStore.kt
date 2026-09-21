@@ -2,13 +2,18 @@ package com.clippy.forever
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.clippy.core.ClipKind
 import java.io.File
 
-class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null, 1) {
-    private val imagesDir = File(context.filesDir, "clip-images").apply { mkdirs() }
+class ClipStore(context: Context) : SQLiteOpenHelper(context.applicationContext, "clippy.db", null, 1) {
+    private val imagesDir = File(context.applicationContext.filesDir, "clip-images").apply { mkdirs() }
+
+    override fun onConfigure(db: SQLiteDatabase) {
+        db.enableWriteAheadLogging()
+    }
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -29,6 +34,7 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null,
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
 
+    @Synchronized
     fun insertText(text: String, fingerprint: String): InsertResult {
         return insert(
             kind = ClipKind.TEXT.name,
@@ -39,6 +45,7 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null,
         )
     }
 
+    @Synchronized
     fun insertImage(bytes: ByteArray, mimeType: String, fingerprint: String): InsertResult {
         val extension = when {
             mimeType.contains("png") -> "png"
@@ -59,6 +66,7 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null,
         )
     }
 
+    @Synchronized
     fun all(query: String = ""): List<ClipRecord> {
         val selection: String?
         val args: Array<String>?
@@ -94,12 +102,14 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null,
         }
     }
 
+    @Synchronized
     fun count(): Int {
         readableDatabase.rawQuery("SELECT COUNT(*) FROM clips", null).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getInt(0) else 0
         }
     }
 
+    @Synchronized
     fun delete(id: Long) {
         val record = all().firstOrNull { it.id == id }
         writableDatabase.delete("clips", "id = ?", arrayOf(id.toString()))
@@ -113,21 +123,44 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context, "clippy.db", null,
         mimeType: String?,
         fingerprint: String,
     ): InsertResult {
-        val values = ContentValues().apply {
-            put("created_at", System.currentTimeMillis())
-            put("kind", kind)
-            put("text", text)
-            put("image_path", imagePath)
-            put("mime_type", mimeType)
-            put("fingerprint", fingerprint)
-        }
-        return try {
-            val id = writableDatabase.insertOrThrow("clips", null, values)
-            InsertResult(id = id, duplicate = false)
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.query(
+                "clips",
+                arrayOf("id"),
+                "fingerprint = ?",
+                arrayOf(fingerprint),
+                null,
+                null,
+                null,
+            ).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    return InsertResult(id = cursor.getLong(0), duplicate = true, failed = false)
+                }
+            }
+            val values = ContentValues().apply {
+                put("created_at", System.currentTimeMillis())
+                put("kind", kind)
+                put("text", text)
+                put("image_path", imagePath)
+                put("mime_type", mimeType)
+                put("fingerprint", fingerprint)
+            }
+            val id = db.insertOrThrow("clips", null, values)
+            if (id < 0) {
+                return InsertResult(id = -1, duplicate = false, failed = true)
+            }
+            db.setTransactionSuccessful()
+            return InsertResult(id = id, duplicate = false, failed = false)
+        } catch (_: SQLiteConstraintException) {
+            return InsertResult(id = -1, duplicate = true, failed = false)
         } catch (_: Exception) {
-            InsertResult(id = -1, duplicate = true)
+            return InsertResult(id = -1, duplicate = false, failed = true)
+        } finally {
+            db.endTransaction()
         }
     }
 
-    data class InsertResult(val id: Long, val duplicate: Boolean)
+    data class InsertResult(val id: Long, val duplicate: Boolean, val failed: Boolean = false)
 }

@@ -25,5 +25,6 @@
     <string name="kind_image">Image</string>
     <string name="copy_action">Copy</string>
     <string name="delete_action">Delete</string>
+    <string name="last_saved">Saved: %1$s</string>
     <string name="count_label">%1$d saved</string>
 </resources>
