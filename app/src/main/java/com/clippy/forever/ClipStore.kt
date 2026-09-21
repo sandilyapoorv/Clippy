@@ -68,21 +68,24 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context.applicationContext,
     }
 
     @Synchronized
-    fun all(query: String = ""): List<ClipRecord> {
-        val selection: String?
-        val args: Array<String>?
-        if (query.isBlank()) {
-            selection = null
-            args = null
-        } else {
-            selection = "text LIKE ?"
-            args = arrayOf("%$query%")
+    fun all(query: String = "", dayStart: Long? = null, dayEnd: Long? = null): List<ClipRecord> {
+        val clauses = mutableListOf<String>()
+        val args = mutableListOf<String>()
+        if (query.isNotBlank()) {
+            clauses += "text LIKE ?"
+            args += "%$query%"
         }
+        if (dayStart != null && dayEnd != null) {
+            clauses += "created_at >= ? AND created_at < ?"
+            args += dayStart.toString()
+            args += dayEnd.toString()
+        }
+        val selection = clauses.joinToString(" AND ").ifEmpty { null }
         readableDatabase.query(
             "clips",
             arrayOf("id", "created_at", "kind", "text", "image_path", "mime_type", "fingerprint"),
             selection,
-            args,
+            args.toTypedArray().ifEmpty { null },
             null,
             null,
             "created_at DESC",

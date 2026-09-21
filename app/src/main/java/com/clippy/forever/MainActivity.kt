@@ -1,6 +1,7 @@
 package com.clippy.forever
 
 import android.Manifest
+import android.app.DatePickerDialog
 import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,23 +10,32 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.format.DateFormat
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.clippy.forever.databinding.ActivityMainBinding
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var capture: ClipboardCapture
     private lateinit var adapter: ClipAdapter
     private var query: String = ""
+    private var dayStart: Long? = null
+    private var dayEnd: Long? = null
 
     private val notifyPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -69,8 +79,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applySystemBarInsets()
         capture = ClipboardCapture(this)
         adapter = ClipAdapter(
             onCopy = { record ->
@@ -118,6 +130,11 @@ class MainActivity : AppCompatActivity() {
         }
         binding.restoreButton.setOnClickListener {
             restoreOpener.launch(arrayOf("application/json", "*/*"))
+        }
+        binding.dateButton.setOnClickListener { pickDate() }
+        binding.dateButton.setOnLongClickListener {
+            clearDateFilter()
+            true
         }
         requestNotificationAccess()
         handleIncoming(intent)
@@ -196,8 +213,58 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun applySystemBarInsets() {
+        val fabGap = resources.getDimensionPixelSize(R.dimen.fab_edge_gap)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            binding.contentRoot.updatePadding(
+                left = bars.left,
+                top = bars.top,
+                right = bars.right,
+            )
+            val params = binding.captureButton.layoutParams as CoordinatorLayout.LayoutParams
+            params.bottomMargin = fabGap + bars.bottom
+            params.marginEnd = fabGap + bars.right
+            binding.captureButton.layoutParams = params
+            insets
+        }
+    }
+
+    private fun pickDate() {
+        val calendar = Calendar.getInstance()
+        dayStart?.let { calendar.timeInMillis = it }
+        DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                val start = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth, 0, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val end = start.clone() as Calendar
+                end.add(Calendar.DAY_OF_MONTH, 1)
+                dayStart = start.timeInMillis
+                dayEnd = end.timeInMillis
+                refresh(scrollToTop = true)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH),
+        ).apply {
+            setButton(DatePickerDialog.BUTTON_NEUTRAL, getString(R.string.clear_date)) { _, _ ->
+                clearDateFilter()
+            }
+        }.show()
+    }
+
+    private fun clearDateFilter() {
+        if (dayStart == null && dayEnd == null) return
+        dayStart = null
+        dayEnd = null
+        refresh(scrollToTop = true)
+    }
+
     private fun refresh(scrollToTop: Boolean = false) {
-        val items = ClippyApp.instance.store.all(query)
+        val items = ClippyApp.instance.store.all(query, dayStart, dayEnd)
         adapter.submitList(items) {
             if (scrollToTop && items.isNotEmpty()) {
                 binding.list.scrollToPosition(0)
@@ -205,7 +272,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.empty.isVisible = items.isEmpty()
-        binding.countLabel.text = getString(R.string.count_label, ClippyApp.instance.store.count())
+        binding.emptyBody.setText(if (dayStart != null) R.string.empty_date_body else R.string.empty_body)
+        val start = dayStart
+        if (start != null) {
+            val dateLabel = DateFormat.getMediumDateFormat(this).format(start)
+            binding.dateButton.text = dateLabel
+            binding.countLabel.text = getString(R.string.count_on_date, items.size, dateLabel)
+        } else {
+            binding.dateButton.text = getString(R.string.all_dates)
+            binding.countLabel.text = getString(R.string.count_label, ClippyApp.instance.store.count())
+        }
     }
 
     private fun refreshChrome() {
