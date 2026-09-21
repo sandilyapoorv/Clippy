@@ -1,4 +1,4 @@
-# Clippy
+# Clippy by Apoorv
 
 Very small Android clipboard history. Text and images stay on the phone until you delete them. There is no account, no cloud, and no automatic expiry.
 
