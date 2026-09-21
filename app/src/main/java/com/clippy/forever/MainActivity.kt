@@ -9,12 +9,16 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.clippy.forever.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -28,13 +32,38 @@ class MainActivity : AppCompatActivity() {
     ) {
         ClipboardWatchService.start(this)
         maybeAskBatteryExemption()
-        refreshWatchUi()
+        refreshChrome()
+    }
+
+    private val backupSaver = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            ClipBackup.export(this, uri)
+            Toast.makeText(this, R.string.backup_ok, Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.backup_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val restoreOpener = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            ClipBackup.import(this, uri)
+            Toast.makeText(this, R.string.restore_ok, Toast.LENGTH_SHORT).show()
+            refresh(scrollToTop = true)
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.restore_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         if (hasWindowFocus()) {
             showStatus(capture.captureCurrent())
-            refresh()
+            refresh(scrollToTop = true)
         }
     }
 
@@ -48,6 +77,7 @@ class MainActivity : AppCompatActivity() {
                 capture.copyBack(record)
                 Toast.makeText(this, R.string.copied_again, Toast.LENGTH_SHORT).show()
             },
+            onEdit = { record -> showEdit(record) },
             onDelete = { record ->
                 ClippyApp.instance.store.delete(record.id)
                 Toast.makeText(this, R.string.deleted, Toast.LENGTH_SHORT).show()
@@ -56,54 +86,64 @@ class MainActivity : AppCompatActivity() {
         )
         binding.list.layoutManager = LinearLayoutManager(this)
         binding.list.adapter = adapter
+        binding.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val first = (recyclerView.layoutManager as LinearLayoutManager)
+                    .findFirstVisibleItemPosition()
+                if (first > 0) {
+                    binding.captureButton.hide()
+                } else {
+                    binding.captureButton.show()
+                }
+            }
+        })
         binding.search.doAfterTextChanged {
             query = it?.toString().orEmpty()
             refresh()
         }
         binding.captureButton.setOnClickListener {
             showStatus(capture.captureCurrent())
-            refresh()
+            refresh(scrollToTop = true)
         }
-        binding.watchSwitch.setOnCheckedChangeListener { _, checked ->
+        binding.workingSwitch.setOnCheckedChangeListener { _, checked ->
             WatchPrefs.setEnabled(this, checked)
             if (checked) ClipboardWatchService.start(this) else ClipboardWatchService.stop(this)
-            refreshWatchUi()
+            refreshChrome()
         }
-        binding.accessibilityButton.setOnClickListener {
+        binding.setupButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        binding.overlayButton.setOnClickListener {
-            startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName"),
-                ),
-            )
+        binding.backupButton.setOnClickListener {
+            backupSaver.launch("clippy-by-apoorv-backup.json")
+        }
+        binding.restoreButton.setOnClickListener {
+            restoreOpener.launch(arrayOf("application/json", "*/*"))
         }
         requestNotificationAccess()
         handleIncoming(intent)
-        refresh()
+        refresh(scrollToTop = true)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIncoming(intent)
-        refresh()
+        refresh(scrollToTop = true)
     }
 
     override fun onResume() {
         super.onResume()
         ClippyApp.mainVisible = true
         ClipInbox.drain(this, ClippyApp.instance.store)
-        binding.watchSwitch.isChecked = WatchPrefs.isEnabled(this)
-        refreshWatchUi()
+        binding.workingSwitch.isChecked = WatchPrefs.isEnabled(this)
+        refreshChrome()
         if (WatchPrefs.isEnabled(this)) {
             ClipboardWatchService.start(this)
         }
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.addPrimaryClipChangedListener(clipListener)
         showStatus(capture.captureCurrent())
-        refresh()
+        refresh(scrollToTop = true)
+        binding.captureButton.show()
     }
 
     override fun onPause() {
@@ -111,6 +151,25 @@ class MainActivity : AppCompatActivity() {
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.removePrimaryClipChangedListener(clipListener)
         super.onPause()
+    }
+
+    private fun showEdit(record: ClipRecord) {
+        val input = EditText(this).apply {
+            setText(record.text.orEmpty())
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.edit_title)
+            .setView(input)
+            .setPositiveButton(R.string.save_edit) { _, _ ->
+                val next = input.text?.toString().orEmpty()
+                if (ClippyApp.instance.store.updateText(record.id, next)) {
+                    Toast.makeText(this, R.string.edited, Toast.LENGTH_SHORT).show()
+                    refresh(scrollToTop = true)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun handleIncoming(intent: Intent?) {
@@ -137,23 +196,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun refresh() {
+    private fun refresh(scrollToTop: Boolean = false) {
         val items = ClippyApp.instance.store.all(query)
-        adapter.submitList(items)
-        binding.empty.visibility = if (items.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        adapter.submitList(items) {
+            if (scrollToTop && items.isNotEmpty()) {
+                binding.list.scrollToPosition(0)
+                binding.captureButton.show()
+            }
+        }
+        binding.empty.isVisible = items.isEmpty()
         binding.countLabel.text = getString(R.string.count_label, ClippyApp.instance.store.count())
     }
 
-    private fun refreshWatchUi() {
-        val a11yOn = ClipboardAccessibilityService.isEnabled(this)
-        binding.accessibilityButton.text = getString(
-            if (a11yOn) R.string.a11y_granted else R.string.a11y_needed,
-        )
-        val overlayOn = Settings.canDrawOverlays(this)
-        binding.overlayButton.text = getString(
-            if (overlayOn) R.string.overlay_granted else R.string.overlay_needed,
-        )
-        binding.overlayButton.isEnabled = !overlayOn
+    private fun refreshChrome() {
+        val working = WatchPrefs.isEnabled(this)
+        binding.workingLabel.text = getString(if (working) R.string.working_yes else R.string.working_no)
+        val needsSetup = !ClipboardAccessibilityService.isEnabled(this)
+        binding.setupButton.isVisible = needsSetup
     }
 
     private fun showStatus(status: CaptureStatus) {

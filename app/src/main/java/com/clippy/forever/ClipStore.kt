@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.clippy.core.ClipKind
+import com.clippy.core.Fingerprint
 import java.io.File
 
 class ClipStore(context: Context) : SQLiteOpenHelper(context.applicationContext, "clippy.db", null, 1) {
@@ -107,6 +108,34 @@ class ClipStore(context: Context) : SQLiteOpenHelper(context.applicationContext,
         readableDatabase.rawQuery("SELECT COUNT(*) FROM clips", null).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getInt(0) else 0
         }
+    }
+
+    @Synchronized
+    fun updateText(id: Long, text: String): Boolean {
+        val fingerprint = uniqueFingerprint(Fingerprint.ofText(text), id)
+        val values = ContentValues().apply {
+            put("text", text)
+            put("fingerprint", fingerprint)
+            put("created_at", System.currentTimeMillis())
+            put("kind", ClipKind.TEXT.name)
+            put("mime_type", "text/plain")
+        }
+        return writableDatabase.update("clips", values, "id = ?", arrayOf(id.toString())) > 0
+    }
+
+    private fun uniqueFingerprint(base: String, ignoreId: Long): String {
+        readableDatabase.query(
+            "clips",
+            arrayOf("id"),
+            "fingerprint = ? AND id != ?",
+            arrayOf(base, ignoreId.toString()),
+            null,
+            null,
+            null,
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) return base
+        }
+        return "$base-$ignoreId"
     }
 
     @Synchronized

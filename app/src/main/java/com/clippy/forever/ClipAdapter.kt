@@ -13,6 +13,7 @@ import java.util.Date
 
 class ClipAdapter(
     private val onCopy: (ClipRecord) -> Unit,
+    private val onEdit: (ClipRecord) -> Unit,
     private val onDelete: (ClipRecord) -> Unit,
 ) : ListAdapter<ClipRecord, ClipAdapter.Holder>(Diff) {
 
@@ -47,7 +48,9 @@ class ClipAdapter(
         } else {
             holder.binding.image.setImageDrawable(null)
         }
+        holder.binding.editButton.isVisible = !isImage
         holder.binding.copyButton.setOnClickListener { onCopy(item) }
+        holder.binding.editButton.setOnClickListener { onEdit(item) }
         holder.binding.deleteButton.setOnClickListener { onDelete(item) }
     }
 }
