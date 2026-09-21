@@ -54,8 +54,8 @@ jobs:
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: Clippy 1.1.0
+          tag_name: v1.2.0
+          name: Clippy 1.2.0
           target_commitish: ${{ github.sha }}
           make_latest: true
           fail_on_unmatched_files: true
@@ -63,21 +63,23 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/outputs/bundle/release/app-release.aab
           body: |
-            Clippy 1.1.0 keeps a local, forever history of text and images from the clipboard, with a persistent background watcher.
+            Clippy 1.2.0 keeps a local forever clipboard history. Enable the Clippy accessibility service so copies are saved while you are in other apps.
 
             ## Install
             1. Download `app-release.apk`
             2. Allow install from this source
-            3. Open Clippy, keep **Always watching** on, allow notifications, Display over other apps, and battery exemption
-            4. Copy text or images in any app — Clippy stays running and saves them
+            3. Open Clippy and tap **Enable Clippy accessibility**
+            4. Turn on Clippy clipboard capture
+            5. Copy text in any app — it should appear in history without leaving Clippy open
 
             ## What this build is
             - Signed with the repo-committed Clippy keystore (stable for sideload updates from this repo; not a Play-protected upload key)
             - AAB attached for Play Console experiments
-            - Persistent foreground watcher; Android still requires a brief on-screen peek to read clipboard bytes
+            - Accessibility capture of Copy/Cut and selected text, plus a tiny accessibility overlay peek for clipboard bytes (including images)
 
             ## Capture paths that work
-            - Always watching (background service + overlay peek)
+            - Clippy accessibility service (works with the main app closed)
+            - Always watching foreground service
             - Clippy is on screen
             - Save clipboard now
             - Quick Settings tile

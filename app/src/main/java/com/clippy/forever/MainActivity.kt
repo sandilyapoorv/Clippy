@@ -69,6 +69,9 @@ class MainActivity : AppCompatActivity() {
             if (checked) ClipboardWatchService.start(this) else ClipboardWatchService.stop(this)
             refreshWatchUi()
         }
+        binding.accessibilityButton.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
         binding.overlayButton.setOnClickListener {
             startActivity(
                 Intent(
@@ -141,6 +144,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshWatchUi() {
+        val a11yOn = ClipboardAccessibilityService.isEnabled(this)
+        binding.accessibilityButton.text = getString(
+            if (a11yOn) R.string.a11y_granted else R.string.a11y_needed,
+        )
         val overlayOn = Settings.canDrawOverlays(this)
         binding.overlayButton.text = getString(
             if (overlayOn) R.string.overlay_granted else R.string.overlay_needed,

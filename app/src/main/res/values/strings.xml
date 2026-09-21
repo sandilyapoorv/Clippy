@@ -3,8 +3,8 @@
     <string name="capture_now">Save clipboard now</string>
     <string name="search_hint">Search saved text</string>
     <string name="empty_title">Nothing saved yet</string>
-    <string name="empty_body">Turn on Always watching, allow the notification, allow Display over other apps, and skip battery optimization.\n\nThen copy as usual. Clippy stays in the background and saves text and images. You can still tap Save clipboard now or share into Clippy.\n\nEverything stays on this phone until you delete it.</string>
-    <string name="limit_banner">Clippy stays on in the background. Allow Display over other apps so it can catch copies. Android still makes the app peek on screen for a moment when you copy — that is an OS rule, not Clippy quitting.</string>
+    <string name="empty_body">Turn on Clippy accessibility. Then copy as usual in any app — selected text and copy taps are saved even when Clippy is closed.\n\nEverything stays on this phone until you delete it.</string>
+    <string name="limit_banner">Turn on the Clippy accessibility service. That is what lets it catch copies while you are in other apps. It only looks for Copy/Cut and selected text, and nothing leaves this phone.</string>
     <string name="copied_again">Copied back to clipboard</string>
     <string name="saved">Saved</string>
     <string name="already_saved">Already in history</string>
@@ -15,6 +15,10 @@
     <string name="notify_body">Always on. Copies are saved to history.</string>
     <string name="channel_name">Clipboard watcher</string>
     <string name="watch_label">Always watching</string>
+    <string name="a11y_needed">Enable Clippy accessibility</string>
+    <string name="a11y_granted">Accessibility is on — copies save in other apps</string>
+    <string name="a11y_label">Clippy clipboard capture</string>
+    <string name="a11y_description">Clippy watches Copy and Cut actions and selected text so it can keep a local clipboard history. It does not send anything off this phone.</string>
     <string name="overlay_needed">Allow display over other apps</string>
     <string name="overlay_granted">Display over other apps is on</string>
     <string name="kind_text">Text</string>

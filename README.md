@@ -6,13 +6,13 @@ Very small Android clipboard history. Text and images stay on the phone until yo
 
 GitHub Actions builds a signed APK and AAB, then attaches them to the [GitHub Release](https://github.com/sandilyapoorv/Clippy/releases).
 
-## Always watching
+## Catch copies in other apps
 
-Leave **Always watching** on. Clippy runs a persistent foreground service and comes back after reboot.
+The main switch is **Enable Clippy accessibility**. Android Settings → Accessibility → Clippy clipboard capture → On.
 
-Android still only lets a normal app *read* clipboard bytes while it has screen focus. So when you copy, Clippy briefly pops a transparent capture screen (needs **Display over other apps**) and saves the text or image. It is not a silent system-level keylogger; that permission does not exist for ordinary apps.
+That service watches Copy/Cut taps and selected text (`canRetrieveWindowContent=true`). If the clipboard itself is blocked, it briefly focuses a 1px accessibility overlay and pastes to recover the clip. This is what makes history work while Clippy is closed.
 
-Also allow the persistent notification and battery exemption so the phone does not kill it.
+Keep **Always watching** on as a backup, and allow the notification / battery exemption so the process is not killed.
 
 ## Build locally
 
@@ -24,4 +24,4 @@ The release keystore is `app/clippy-release.jks` with passwords in `gradle.prope
 
 ## Tests
 
-`./gradlew :core:test` runs fingerprint and preview tests on the JVM. Instrumented UI tests are in `app/src/androidTest` and need a device or emulator.
+`./gradlew :core:test` runs fingerprint, preview, and copy-detector tests on the JVM. Instrumented UI tests are in `app/src/androidTest` and need a device or emulator.
