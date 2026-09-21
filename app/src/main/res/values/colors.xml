@@ -1,0 +1,8 @@
+<resources>
+    <color name="clippy_bg">#FFF7F0</color>
+    <color name="clippy_surface">#FFFFFF</color>
+    <color name="clippy_ink">#1C140F</color>
+    <color name="clippy_muted">#6B5A4E</color>
+    <color name="clippy_accent">#C45C26</color>
+    <color name="clippy_banner">#FFE8D6</color>
+</resources>

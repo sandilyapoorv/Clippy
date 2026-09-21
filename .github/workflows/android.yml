@@ -1,0 +1,78 @@
+name: Android
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make wrapper executable
+        run: chmod +x gradlew
+
+      - name: Unit tests
+        run: ./gradlew :core:test --stacktrace
+
+      - name: Assemble signed release APK and AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: clippy-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: clippy-release-aab
+          path: app/build/outputs/bundle/release/app-release.aab
+
+      - name: GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: Clippy 1.0.0
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/release/app-release.aab
+          body: |
+            Clippy 1.0.0 keeps a local, forever history of text and images you save from the clipboard.
+
+            ## Install
+            1. Download `app-release.apk`
+            2. Allow install from this source
+            3. Open Clippy, copy something, then tap **Save clipboard now** (or leave Clippy open while you copy)
+
+            ## What this build is
+            - Signed with the repo-committed Clippy keystore (stable for sideload updates from this repo; not a Play-protected upload key)
+            - AAB attached for Play Console experiments
+            - No automatic background capture on stock Android 10+ (platform restriction)
+
+            ## Capture paths that work
+            - Clippy is on screen
+            - Save clipboard now
+            - Persistent notification tap
+            - Quick Settings tile
+            - Share sheet → Clippy

@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Clippy</string>
+    <string name="capture_now">Save clipboard now</string>
+    <string name="search_hint">Search saved text</string>
+    <string name="empty_title">Nothing saved yet</string>
+    <string name="empty_body">Android only lets apps read the clipboard while they are on screen.\n\nCopy something, then open Clippy or tap Save clipboard now. You can also share text or images to Clippy. Add the quick-settings tile for one-tap save.\n\nEverything you save stays on this phone forever until you delete it.</string>
+    <string name="limit_banner">Background copy capture is blocked on Android 10+. Clippy saves when this screen is open, when you tap Save, when you use the tile, or when you share into the app.</string>
+    <string name="copied_again">Copied back to clipboard</string>
+    <string name="saved">Saved</string>
+    <string name="already_saved">Already in history</string>
+    <string name="nothing_on_clipboard">Clipboard is empty or blocked. Open Clippy first, then copy again.</string>
+    <string name="deleted">Deleted</string>
+    <string name="tile_save">Save clipboard</string>
+    <string name="notify_title">Clippy is ready</string>
+    <string name="notify_body">Tap to save whatever is on the clipboard.</string>
+    <string name="channel_name">Clipboard save</string>
+    <string name="kind_text">Text</string>
+    <string name="kind_image">Image</string>
+    <string name="copy_action">Copy</string>
+    <string name="delete_action">Delete</string>
+    <string name="count_label">%1$d saved</string>
+</resources>
