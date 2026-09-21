@@ -21,11 +21,12 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Make wrapper executable
-        run: chmod +x gradlew
+      - name: Accept Android licenses
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses"
+          printf '24333f8a63b6825ea9c5514f07c5761f61c6aa09\n' > "$ANDROID_HOME/licenses/android-sdk-license"
+          printf '84831b9409646161d0d3dcd7889b4816238a8339\n' > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+          chmod +x gradlew
 
       - name: Unit tests
         run: ./gradlew :core:test --stacktrace
