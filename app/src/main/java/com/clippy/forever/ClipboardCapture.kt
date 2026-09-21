@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import com.clippy.core.CopyDetector
 import com.clippy.core.Fingerprint
 
 enum class CaptureStatus { SAVED, DUPLICATE, EMPTY }
@@ -55,6 +56,7 @@ class ClipboardCapture(private val context: Context) {
     }
 
     private fun saveText(text: String): CaptureStatus {
+        if (CopyDetector.looksLikeUiChrome(text)) return CaptureStatus.EMPTY
         ClipInbox.addText(context, text)
         val result = store.insertText(text, Fingerprint.ofText(text))
         return when {

@@ -1,16 +1,38 @@
 package com.clippy.core
 
 object CopyDetector {
-    private val copyWords = setOf("copy", "copied", "cut", "clipboard")
-    private val skip = setOf("copyright", "photocopy")
+    private val exact = setOf(
+        "copy",
+        "cut",
+        "copied",
+        "copy all",
+        "copy link",
+        "copy text",
+        "copy image",
+        "copy to clipboard",
+        "copied to clipboard",
+    )
 
     fun looksLikeCopyAction(vararg parts: String?): Boolean {
-        val label = parts.filterNotNull().joinToString(" ").lowercase().trim()
-        if (label.isEmpty()) return false
-        if (skip.any { label.contains(it) }) return false
-        if (label.contains("copy to clipboard") || label.contains("copied to clipboard")) return true
-        if (label.contains("/copy") || label.contains(":id/copy") || label.contains("_copy")) return true
-        val tokens = label.split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
-        return tokens.any { it in copyWords }
+        val pieces = parts.mapNotNull { it?.trim() }.filter { it.isNotEmpty() }
+        if (pieces.isEmpty()) return false
+        if (pieces.any { it.lowercase() in exact }) return true
+        val id = pieces.joinToString(" ").lowercase()
+        if (id.contains("copyright") || id.contains("photocopy")) return false
+        return id.contains("/copy") || id.contains(":id/copy") || id.endsWith("_copy") || id.endsWith("/cut")
+    }
+
+    fun looksLikeUiChrome(text: String): Boolean {
+        val compact = text.trim()
+        if (compact.length > 40) return false
+        val lower = compact.lowercase().replace("\\s+".toRegex(), " ")
+        val chrome = setOf(
+            "wi-fi", "wi - fi", "wifi", "wi-fi off", "wi - fi off", "wi-fioff", "wi - fioff",
+            "crop", "message", "phone", "clock", "bluetooth", "hotspot", "flashlight",
+            "airplane", "silent", "vibrate", "mobile data",
+        )
+        if (lower in chrome) return true
+        if (lower.contains("true5g") || lower.contains("jio")) return true
+        return false
     }
 }
