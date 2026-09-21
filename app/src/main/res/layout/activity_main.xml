@@ -6,6 +6,7 @@
     android:background="@color/clippy_bg">
 
     <LinearLayout
+        android:id="@+id/contentRoot"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -103,6 +104,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/restore" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dateButton"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/all_dates" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -147,6 +155,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/emptyBody"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -163,7 +172,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="20dp"
+        android:layout_margin="@dimen/fab_edge_gap"
         android:text="@string/capture_now"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/clippy_accent"

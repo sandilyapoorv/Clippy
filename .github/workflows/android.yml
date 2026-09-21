@@ -54,8 +54,8 @@ jobs:
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.0
-          name: Clippy by Apoorv 1.5.0
+          tag_name: v1.6.0
+          name: Clippy by Apoorv 1.6.0
           target_commitish: ${{ github.sha }}
           make_latest: true
           fail_on_unmatched_files: true
@@ -63,7 +63,7 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/outputs/bundle/release/app-release.aab
           body: |
-            Clippy by Apoorv 1.5.0 — only saves real clipboard text/images. Stops treating status-bar and button labels (Wi-Fi, Crop, Jio, Message) as copies.
+            Clippy by Apoorv 1.6.0 — status bar spacing plus a date filter for clipboard history.
 
             ## Install
             1. Download `app-release.apk`
